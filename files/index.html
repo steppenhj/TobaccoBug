@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BioRear — 사육 관리</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header id="header">
+    <div class="header-left">
+      <div class="logo">🪲</div>
+      <div>
+        <div class="logo-title">BioRear</div>
+        <div class="logo-sub">담배장님노린재 사육 관리</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="syncStatus" class="sync-status"></span>
+      <button class="btn-icon" onclick="exportJSON()" title="데이터 내보내기">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main">
+    <div id="loadingView" class="loading-view">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">데이터 로딩 중...</div>
+    </div>
+
+    <div id="dashboardView" class="hidden">
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="section-header">
+        <div class="section-label"><span class="section-icon big">🦟</span><span>사육 케이지</span></div>
+        <button class="btn-add" onclick="addBigCage()">+ 추가</button>
+      </div>
+      <div class="cage-grid" id="bigCageGrid"></div>
+      <div class="section-header" style="margin-top:28px">
+        <div class="section-label"><span class="section-icon small">🌱</span><span>가루이 증식</span></div>
+        <button class="btn-add" onclick="addSmallCage()">+ 추가</button>
+      </div>
+      <div class="cage-grid" id="smallCageGrid"></div>
+    </div>
+
+    <div id="detailView" class="hidden">
+      <button class="btn-back" onclick="goBack()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        돌아가기
+      </button>
+      <div class="detail-top">
+        <div class="detail-header">
+          <span class="cage-badge" id="detailBadge"></span>
+          <input class="detail-name-input" id="detailNameInput" />
+        </div>
+        <div class="detail-actions">
+          <button class="btn-danger-sm" id="detailDeleteBtn">케이지 삭제</button>
+        </div>
+      </div>
+      <div id="detailStatusArea"></div>
+      <div id="logArea"></div>
+    </div>
+  </main>
+
+  <div id="modalOverlay" class="modal-overlay hidden" onclick="closeModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-title" id="modalTitle"></div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module" src="main.js"></script>
+</body>
+</html>
