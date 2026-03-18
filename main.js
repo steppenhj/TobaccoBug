@@ -134,15 +134,16 @@ async function removeCage(cageId) {
 // Load all cages + their logs
 async function loadAll() {
   const cagesSnap = await getDocs(CAGES_COL);
-  cages = [];
-  for (const cageDoc of cagesSnap.docs) {
-    const data = cageDoc.data();
-    const logsSnap = await getDocs(
-      query(collection(db, "cages", cageDoc.id, "logs"), orderBy("date", "desc"))
-    );
-    const logs = logsSnap.docs.map(d => ({ ...d.data(), _id: d.id }));
-    cages.push({ ...data, id: cageDoc.id, logs });
-  }
+  cages = await Promise.all(
+    cagesSnap.docs.map(async (cageDoc) => {
+      const data = cageDoc.data();
+      const logsSnap = await getDocs(
+        query(collection(db, "cages", cageDoc.id, "logs"), orderBy("date", "desc"))
+      );
+      const logs = logsSnap.docs.map(d => ({ ...d.data(), _id: d.id }));
+      return { ...data, id: cageDoc.id, logs };
+    })
+  );
 }
 
 // Create default cages
