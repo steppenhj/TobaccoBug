@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BioRear — 사육 관리</title>
+  <title>TobaccoBug — 사육 관리</title>
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 </head>
@@ -12,12 +12,17 @@
     <div class="header-left">
       <div class="logo">🪲</div>
       <div>
-        <div class="logo-title">BioRear</div>
+        <div class="logo-title">TobaccoBug</div>
         <div class="logo-sub">담배장님노린재 사육 관리</div>
       </div>
     </div>
-    <div class="header-right">
+    <div class="header-right" style="align-items: center;">
       <span id="syncStatus" class="sync-status"></span>
+      
+      <button class="btn-icon" onclick="window.location.href='measure.html'" title="잎 크기 측정" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; font-family: inherit;">
+        🌿 잎 측정
+      </button>
+
       <button class="btn-icon" onclick="exportJSON()" title="데이터 내보내기">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
       </button>
