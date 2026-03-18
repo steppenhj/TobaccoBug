@@ -12,7 +12,7 @@
     <div class="header-left">
       <div class="logo">🪲</div>
       <div>
-        <div class="logo-title">TobaccoBug</div>
+        <div class="logo-title">BioRear</div>
         <div class="logo-sub">담배장님노린재 사육 관리</div>
       </div>
     </div>
@@ -31,18 +31,26 @@
     </div>
 
     <div id="dashboardView" class="hidden">
-      <div id="alertsPanel"></div>
-      <div class="stats-grid" id="statsGrid"></div>
-      <div class="section-header">
-        <div class="section-label"><span class="section-icon big">🦟</span><span>사육 케이지</span></div>
-        <button class="btn-add" onclick="addBigCage()">+ 추가</button>
+      <div class="dashboard-layout">
+        <!-- 좌측: 행동 강령 사이드바 -->
+        <aside class="alerts-sidebar">
+          <div id="alertsPanel"></div>
+        </aside>
+        <!-- 우측: 메인 콘텐츠 -->
+        <div class="dashboard-main">
+          <div class="stats-grid" id="statsGrid"></div>
+          <div class="section-header">
+            <div class="section-label"><span class="section-icon big">🦟</span><span>사육 케이지</span></div>
+            <button class="btn-add" onclick="addBigCage()">+ 추가</button>
+          </div>
+          <div class="cage-grid" id="bigCageGrid"></div>
+          <div class="section-header" style="margin-top:28px">
+            <div class="section-label"><span class="section-icon small">🌱</span><span>가루이 증식</span></div>
+            <button class="btn-add" onclick="addSmallCage()">+ 추가</button>
+          </div>
+          <div class="cage-grid" id="smallCageGrid"></div>
+        </div>
       </div>
-      <div class="cage-grid" id="bigCageGrid"></div>
-      <div class="section-header" style="margin-top:28px">
-        <div class="section-label"><span class="section-icon small">🌱</span><span>가루이 증식</span></div>
-        <button class="btn-add" onclick="addSmallCage()">+ 추가</button>
-      </div>
-      <div class="cage-grid" id="smallCageGrid"></div>
     </div>
 
     <div id="detailView" class="hidden">

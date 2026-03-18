@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>BioRear — 노션 데이터 Import</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d1117; --surface: #161b22; --border: #30363d;
+      --green: #3fb950; --blue: #58a6ff; --red: #f85149;
+      --yellow: #d29922; --text: #e6edf3; --text-2: #8b949e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; padding: 32px; min-height: 100vh; }
+    h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .sub { font-size: 13px; color: var(--text-2); margin-bottom: 28px; }
+    .warning-box {
+      background: #2d1b00; border: 1px solid var(--yellow); border-radius: 8px;
+      padding: 14px 18px; margin-bottom: 24px; font-size: 13px; line-height: 1.6;
+    }
+    .warning-box strong { color: var(--yellow); }
+    .data-preview {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px; margin-bottom: 24px; max-height: 360px; overflow-y: auto;
+    }
+    .cage-block { margin-bottom: 20px; }
+    .cage-title { font-size: 13px; font-weight: 700; color: var(--blue); margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; }
+    .log-row {
+      font-size: 12px; font-family: 'JetBrains Mono', monospace;
+      padding: 3px 0; border-bottom: 1px solid #21262d; color: var(--text-2);
+      display: flex; gap: 12px;
+    }
+    .log-row .date { color: var(--text); min-width: 80px; }
+    .log-row .kind-in { color: var(--blue); min-width: 28px; }
+    .log-row .kind-out { color: var(--green); min-width: 28px; }
+    .log-row .species { min-width: 36px; }
+    .log-row .count { min-width: 56px; text-align: right; }
+    .log-row .memo { color: #6e7681; }
+    .btn-import {
+      background: var(--green); color: #0d1117; border: none; border-radius: 8px;
+      padding: 12px 28px; font-size: 14px; font-weight: 700; cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif; transition: opacity .15s;
+    }
+    .btn-import:hover { opacity: .85; }
+    .btn-import:disabled { opacity: .4; cursor: not-allowed; }
+    #logOutput {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px; margin-top: 20px; max-height: 400px; overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; display: none;
+    }
+    .log-ok { color: var(--green); }
+    .log-err { color: var(--red); }
+    .log-info { color: var(--text-2); }
+    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin: 16px 0; }
+    .progress-fill { height: 100%; background: var(--green); border-radius: 2px; width: 0; transition: width .3s; }
+    .summary {
+      background: #0d2a0d; border: 1px solid var(--green); border-radius: 8px;
+      padding: 14px 18px; margin-top: 20px; font-size: 13px; display: none;
+    }
+    .summary strong { color: var(--green); }
+  </style>
+</head>
+<body>
+
+<h1>🪲 BioRear — 노션 데이터 Import</h1>
+<div class="sub">1회용 마이그레이션 툴 · 기존 로그에 중복 추가되므로 한 번만 실행할 것</div>
+
+<div class="warning-box">
+  <strong>⚠️ 주의사항</strong><br>
+  이 툴은 아래 데이터를 Firestore에 <strong>직접 추가</strong>합니다.<br>
+  앱에 이미 같은 날짜 로그가 있다면 중복 생성됩니다. 반드시 <strong>한 번만 실행</strong>하세요.
+</div>
+
+<div class="data-preview" id="dataPreview"></div>
+
+<button class="btn-import" id="importBtn" onclick="startImport()">Firebase에 Import 시작</button>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<div id="logOutput"></div>
+<div class="summary" id="summary"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getFirestore, collection, addDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCZ43yOqdUWNSw7ZiG0qBXfc5rUnR-crNY",
+  authDomain: "naturalenemy.firebaseapp.com",
+  projectId: "naturalenemy",
+  storageBucket: "naturalenemy.firebasestorage.app",
+  messagingSenderId: "1011614255944",
+  appId: "1:1011614255944:web:a5c6268c6d98623466017d",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// =============================================
+// 노션 데이터 → 로그 구조 변환
+// 날짜 규칙: 12월 → 2025년, 나머지 → 2026년
+// 채집(📤) → kind: "release"
+// 투입(📥) → kind: "input"
+// 수량 없음 → 300
+// =============================================
+
+function d(month, day, hour = 9) {
+  const year = month === 12 ? 2025 : 2026;
+  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}T${String(hour).padStart(2,'0')}:00`;
+}
+
+const NOTION_DATA = [
+  // ── B1 (1번) ──
+  { cageId: "B1", kind: "input",   date: d(12,10), species: "가루이", count: 1500, memo: "" },
+  { cageId: "B1", kind: "release", date: d(1,12),  species: "가루이", count: 1000, memo: "D+33일 첫 채집" },
+  { cageId: "B1", kind: "release", date: d(1,26),  species: "가루이", count: 2000, memo: "" },
+  { cageId: "B1", kind: "release", date: d(1,30),  species: "가루이", count: 400,  memo: "" },
+  { cageId: "B1", kind: "input",   date: d(2,6),   species: "가루이", count: 1000, memo: "식물 추가됨" },
+  { cageId: "B1", kind: "input",   date: d(2,13),  species: "담장",   count: 50,   memo: "7번에서 남은 애들" },
+  { cageId: "B1", kind: "input",   date: d(2,19),  species: "담장",   count: 70,   memo: "" },
+  { cageId: "B1", kind: "input",   date: d(3,4),   species: "담장",   count: 10,   memo: "2번의 일부" },
+  { cageId: "B1", kind: "release", date: d(3,6),   species: "담장",   count: 40,   memo: "" },
+
+  // ── B2 (2번) ──
+  { cageId: "B2", kind: "input",   date: d(12,10), species: "가루이", count: 1500, memo: "" },
+  { cageId: "B2", kind: "release", date: d(1,12),  species: "가루이", count: 5000, memo: "D+33일 폭발" },
+  { cageId: "B2", kind: "release", date: d(1,15),  species: "가루이", count: 3000, memo: "" },
+  { cageId: "B2", kind: "release", date: d(1,21),  species: "가루이", count: 4000, memo: "" },
+  { cageId: "B2", kind: "input",   date: d(1,21),  species: "담장",   count: 70,   memo: "가루이 풍부 / 정착 유도 중" },
+  { cageId: "B2", kind: "release", date: d(1,26),  species: "가루이", count: 4000, memo: "" },
+  { cageId: "B2", kind: "release", date: d(1,30),  species: "가루이", count: 1600, memo: "" },
+  { cageId: "B2", kind: "release", date: d(2,11),  species: "담장",   count: 50,   memo: "유충(약충) 다수 확인" },
+  { cageId: "B2", kind: "input",   date: d(2,19),  species: "담장",   count: 50,   memo: "" },
+  { cageId: "B2", kind: "input",   date: d(2,26),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B2", kind: "release", date: d(3,4),   species: "담장",   count: 250,  memo: "케이지를 1번으로 옮김" },
+  // 리셋 후
+  { cageId: "B2", kind: "input",   date: d(3,6),   species: "가루이", count: 500,  memo: "리셋 — 비우고 가루이만 넣음" },
+  { cageId: "B2", kind: "input",   date: d(3,17),  species: "가루이", count: 400,  memo: "아직 많이 없음" },
+
+  // ── B3 (3번) ──
+  { cageId: "B3", kind: "input",   date: d(1,12),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B3", kind: "input",   date: d(1,21),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B3", kind: "input",   date: d(2,3),   species: "담장",   count: 100,  memo: "7번 유래 / 가루이 폭발 시점 투입" },
+  { cageId: "B3", kind: "input",   date: d(2,5),   species: "담장",   count: 100,  memo: "7번 유래" },
+  { cageId: "B3", kind: "release", date: d(2,27),  species: "가루이", count: 1000, memo: "너무 많음. 노린재도 많음." },
+  { cageId: "B3", kind: "release", date: d(3,11),  species: "담장",   count: 100,  memo: "담장, 가루이 많음" },
+
+  // ── B4 (4번) ──
+  { cageId: "B4", kind: "input",   date: d(1,12),  species: "가루이", count: 2000, memo: "" },
+  { cageId: "B4", kind: "input",   date: d(1,21),  species: "가루이", count: 2000, memo: "" },
+  { cageId: "B4", kind: "release", date: d(2,3),   species: "가루이", count: 1000, memo: "7번 먹이 공급용 채집" },
+  { cageId: "B4", kind: "input",   date: d(2,6),   species: "담장",   count: 300,  memo: "" },
+  { cageId: "B4", kind: "release", date: d(2,11),  species: "담장",   count: 150,  memo: "" },
+  { cageId: "B4", kind: "release", date: d(2,19),  species: "담장",   count: 50,   memo: "" },
+  { cageId: "B4", kind: "release", date: d(3,6),   species: "담장",   count: 18,   memo: "" },
+
+  // ── B5 (5번) ──
+  { cageId: "B5", kind: "input",   date: d(1,8),   species: "가루이", count: 1000, memo: "" },
+  { cageId: "B5", kind: "input",   date: d(2,11),  species: "담장",   count: 50,   memo: "7번 유래" },
+  { cageId: "B5", kind: "input",   date: d(2,27),  species: "가루이", count: 500,  memo: "" },
+  { cageId: "B5", kind: "release", date: d(3,4),   species: "담장",   count: 50,   memo: "케이지를 4번으로 옮김" },
+  // 리셋 후
+  { cageId: "B5", kind: "input",   date: d(3,6),   species: "가루이", count: 500,  memo: "리셋 — 비우고 가루이만 넣음" },
+  { cageId: "B5", kind: "input",   date: d(3,17),  species: "가루이", count: 400,  memo: "아직 많이 없음" },
+
+  // ── B6 (6번) ──
+  { cageId: "B6", kind: "input",   date: d(11,26), species: "가루이", count: 1000, memo: "최장기 케이지" },
+  { cageId: "B6", kind: "input",   date: d(1,1),   species: "담장",   count: 50,   memo: "" },
+  { cageId: "B6", kind: "input",   date: d(1,19),  species: "담장",   count: 70,   memo: "" },
+  { cageId: "B6", kind: "release", date: d(2,2),   species: "가루이", count: 2000, memo: "9, 10번으로" },
+  { cageId: "B6", kind: "release", date: d(2,4),   species: "담장",   count: 150,  memo: "1차 농가 보급" },
+  { cageId: "B6", kind: "release", date: d(2,11),  species: "담장",   count: 200,  memo: "" },
+  { cageId: "B6", kind: "release", date: d(2,19),  species: "담장",   count: 50,   memo: "3차 농가 보급" },
+  { cageId: "B6", kind: "input",   date: d(2,19),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B6", kind: "input",   date: d(2,26),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B6", kind: "release", date: d(3,6),   species: "담장",   count: 126,  memo: "" },
+
+  // ── B7 (7번) ──
+  { cageId: "B7", kind: "input",   date: d(11,26), species: "가루이", count: 3000, memo: "최장기 케이지" },
+  { cageId: "B7", kind: "input",   date: d(12,31), species: "담장",   count: 100,  memo: "" },
+  { cageId: "B7", kind: "release", date: d(2,3),   species: "담장",   count: 100,  memo: "3번 케이지로 이식" },
+  { cageId: "B7", kind: "input",   date: d(2,3),   species: "가루이", count: 1000, memo: "4번 유래 / 먹이 긴급 보충" },
+  { cageId: "B7", kind: "release", date: d(2,4),   species: "담장",   count: 250,  memo: "1차 농가 보급" },
+  { cageId: "B7", kind: "release", date: d(2,5),   species: "담장",   count: 100,  memo: "3번 케이지로 이식" },
+  { cageId: "B7", kind: "release", date: d(2,6),   species: "담장",   count: 300,  memo: "" },
+  { cageId: "B7", kind: "input",   date: d(2,6),   species: "가루이", count: 1000, memo: "" },
+  { cageId: "B7", kind: "release", date: d(2,9),   species: "담장",   count: 140,  memo: "" },
+  { cageId: "B7", kind: "input",   date: d(2,9),   species: "가루이", count: 1000, memo: "" },
+  { cageId: "B7", kind: "release", date: d(2,11),  species: "담장",   count: 100,  memo: "이제 거의 없음" },
+  { cageId: "B7", kind: "input",   date: d(2,11),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B7", kind: "release", date: d(2,13),  species: "담장",   count: 50,   memo: "" },
+  { cageId: "B7", kind: "release", date: d(2,19),  species: "담장",   count: 50,   memo: "" },
+  { cageId: "B7", kind: "input",   date: d(2,26),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B7", kind: "release", date: d(3,4),   species: "담장",   count: 140,  memo: "케이지 정리 8번으로" },
+  { cageId: "B7", kind: "release", date: d(3,9),   species: "담장",   count: 40,   memo: "케이지 리뉴얼 준비 중 남은 것들" },
+  { cageId: "B7", kind: "input",   date: d(3,9),   species: "가루이", count: 300,  memo: "11, 12번 케이지 + 가루이 100마리 / 아마 총 300마리 이상" },
+  { cageId: "B7", kind: "input",   date: d(3,17),  species: "가루이", count: 400,  memo: "아직 가루이 많이 없음" },
+
+  // ── B8 (8번) ──
+  { cageId: "B8", kind: "input",   date: d(1,8),   species: "가루이", count: 1500, memo: "" },
+  { cageId: "B8", kind: "input",   date: d(1,30),  species: "가루이", count: 2000, memo: "" },
+  { cageId: "B8", kind: "input",   date: d(2,9),   species: "담장",   count: 140,  memo: "" },
+  { cageId: "B8", kind: "input",   date: d(2,26),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B8", kind: "input",   date: d(3,4),   species: "담장",   count: 140,  memo: "7번 유래" },
+  { cageId: "B8", kind: "release", date: d(3,6),   species: "담장",   count: 20,   memo: "" },
+  { cageId: "B8", kind: "input",   date: d(3,9),   species: "담장",   count: 40,   memo: "" },
+
+  // ── B9 (9번) ──
+  { cageId: "B9", kind: "input",   date: d(1,21),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B9", kind: "input",   date: d(2,2),   species: "가루이", count: 1000, memo: "6번 유래" },
+  { cageId: "B9", kind: "release", date: d(2,6),   species: "가루이", count: 1000, memo: "" },
+  { cageId: "B9", kind: "release", date: d(2,9),   species: "가루이", count: 1000, memo: "" },
+  { cageId: "B9", kind: "release", date: d(2,11),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B9", kind: "release", date: d(2,26),  species: "가루이", count: 2500, memo: "" },
+  { cageId: "B9", kind: "release", date: d(2,27),  species: "가루이", count: 500,  memo: "" },
+  { cageId: "B9", kind: "release", date: d(3,5),   species: "가루이", count: 500,  memo: "" },
+  { cageId: "B9", kind: "release", date: d(3,6),   species: "가루이", count: 500,  memo: "" },
+  { cageId: "B9", kind: "release", date: d(3,10),  species: "가루이", count: 600,  memo: "갑자기 가루이 터짐 (어제는 없었음)" },
+  { cageId: "B9", kind: "release", date: d(3,17),  species: "가루이", count: 1500, memo: "" },
+
+  // ── B10 (10번) ──
+  { cageId: "B10", kind: "input",   date: d(1,21), species: "가루이", count: 1000, memo: "" },
+  { cageId: "B10", kind: "input",   date: d(2,2),  species: "가루이", count: 1000, memo: "6번 유래" },
+  { cageId: "B10", kind: "release", date: d(2,6),  species: "가루이", count: 1000, memo: "" },
+  { cageId: "B10", kind: "release", date: d(2,19), species: "가루이", count: 1000, memo: "" },
+  { cageId: "B10", kind: "release", date: d(2,26), species: "가루이", count: 1500, memo: "" },
+  { cageId: "B10", kind: "release", date: d(3,6),  species: "가루이", count: 500,  memo: "" },
+
+  // ── S1 (11번 → small cage) ──
+  { cageId: "S1", kind: "input",   date: d(2,27),  species: "가루이", count: 1000, memo: "추후에 담배 통째로 다른 케이지에 옮길 계획" },
+  { cageId: "S1", kind: "release", date: d(3,9),   species: "가루이", count: 300,  memo: "식물 자체를 7번으로" },
+  { cageId: "S1", kind: "input",   date: d(3,10),  species: "가루이", count: 300,  memo: "리뉴얼" },
+  { cageId: "S1", kind: "input",   date: d(3,17),  species: "가루이", count: 300,  memo: "담배 3개에 가루이 300마리" },
+
+  // ── S2 (12번 → small cage) ──
+  { cageId: "S2", kind: "input",   date: d(3,3),   species: "가루이", count: 200,  memo: "" },
+  { cageId: "S2", kind: "release", date: d(3,9),   species: "가루이", count: 300,  memo: "식물 자체를 7번으로" },
+  { cageId: "S2", kind: "input",   date: d(3,10),  species: "가루이", count: 300,  memo: "리뉴얼" },
+  { cageId: "S2", kind: "input",   date: d(3,17),  species: "가루이", count: 100,  memo: "담배 1개, 원래도 가루이 오염된 것" },
+];
+
+// ─── 프리뷰 렌더링 ───────────────────────────────
+function renderPreview() {
+  const grouped = {};
+  for (const log of NOTION_DATA) {
+    if (!grouped[log.cageId]) grouped[log.cageId] = [];
+    grouped[log.cageId].push(log);
+  }
+  const el = document.getElementById("dataPreview");
+  let html = "";
+  for (const cageId of Object.keys(grouped).sort()) {
+    html += `<div class="cage-block"><div class="cage-title">${cageId} — ${grouped[cageId].length}건</div>`;
+    for (const log of grouped[cageId]) {
+      const kindCls = log.kind === "input" ? "kind-in" : "kind-out";
+      const kindTxt = log.kind === "input" ? "IN" : "OUT";
+      const dateShort = log.date.slice(5,10).replace("-","/");
+      html += `<div class="log-row">
+        <span class="date">${dateShort}</span>
+        <span class="${kindCls}">${kindTxt}</span>
+        <span class="species">${log.species}</span>
+        <span class="count">${log.count.toLocaleString()}마리</span>
+        <span class="memo">${log.memo}</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ─── Import 실행 ─────────────────────────────────
+window.startImport = async function() {
+  const btn = document.getElementById("importBtn");
+  const logEl = document.getElementById("logOutput");
+  const fill = document.getElementById("progressFill");
+  btn.disabled = true;
+  logEl.style.display = "block";
+  logEl.innerHTML = "";
+
+  const total = NOTION_DATA.length;
+  let ok = 0, err = 0;
+
+  function log(msg, cls = "log-info") {
+    logEl.innerHTML += `<div class="${cls}">${msg}</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  log(`총 ${total}건 import 시작...`);
+
+  for (let i = 0; i < NOTION_DATA.length; i++) {
+    const entry = NOTION_DATA[i];
+    try {
+      const logsCol = collection(db, "cages", entry.cageId, "logs");
+      await addDoc(logsCol, {
+        kind: entry.kind,
+        date: entry.date,
+        species: entry.species,
+        count: entry.count,
+        memo: entry.memo,
+        fromId: null,
+        createdAt: new Date().toISOString(),
+        _imported: true,
+      });
+      ok++;
+      log(`✓ [${entry.cageId}] ${entry.date.slice(5,10)} ${entry.kind === "input" ? "투입" : "방사"} ${entry.species} ${entry.count}마리`, "log-ok");
+    } catch (e) {
+      err++;
+      log(`✗ [${entry.cageId}] ${entry.date.slice(5,10)} 실패: ${e.message}`, "log-err");
+    }
+    fill.style.width = `${((i + 1) / total) * 100}%`;
+    // 과도한 요청 방지
+    if (i % 10 === 9) await new Promise(r => setTimeout(r, 100));
+  }
+
+  const summary = document.getElementById("summary");
+  summary.style.display = "block";
+  summary.innerHTML = `<strong>완료!</strong> 성공 ${ok}건 / 실패 ${err}건<br>
+    <span style="color:var(--text-2);font-size:12px">앱으로 돌아가서 각 케이지 로그를 확인하세요.<br>이 페이지는 이제 삭제해도 됩니다.</span>`;
+
+  log(`\n완료 — 성공 ${ok} / 실패 ${err}`, ok === total ? "log-ok" : "log-err");
+};
+
+renderPreview();
+</script>
+</body>
+</html>
