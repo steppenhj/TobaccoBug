@@ -30,6 +30,115 @@ let saving = false;
 let unsubCages = null;
 let unsubLogs = null;
 
+// main.js
+
+// --- State ---
+// ... 기존 selectedId, unsubList 등 ...
+let popChart = null; // 차트 인스턴스 저장 변수 추가
+
+// ... 기존 renderAlerts, renderStats 함수들 ...
+
+// ========== RENDER FUNCTION ==========
+
+/**
+ * 큰 케이지별 현재 담장/가루이 개체 수 비교 차트를 렌더링합니다.
+ */
+function renderChart() {
+  const ctx = document.getElementById('populationChart');
+  if (!ctx) return;
+
+  const bigs = bigCages();
+  const labels = bigs.map(c => c.id);
+  const damjangData = bigs.map(c => c.currentStatus?.damjangCount || 0);
+  const garuiData = bigs.map(c => c.currentStatus?.garuiCount || 0);
+
+  if (popChart) {
+    popChart.destroy();
+  }
+
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+
+  popChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '가루이 (마리)',
+          data: garuiData,
+          backgroundColor: 'rgba(59, 130, 246, 0.7)', // 파란색
+          borderColor: 'rgba(59, 130, 246, 1)',
+          borderWidth: 1,
+          borderRadius: 4,
+          yAxisID: 'y' // 좌측 Y축 사용
+        },
+        {
+          label: '담장 (마리)',
+          data: damjangData,
+          backgroundColor: 'rgba(34, 197, 94, 0.7)', // 초록색
+          borderColor: 'rgba(34, 197, 94, 1)',
+          borderWidth: 1,
+          borderRadius: 4,
+          yAxisID: 'y1' // 우측 Y축 사용
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      scales: {
+        x: { 
+          grid: { display: false } 
+        },
+        y: { 
+          // 좌측 Y축 (가루이 기준)
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: {
+            display: true,
+            text: '가루이 (좌측)',
+            color: 'rgba(59, 130, 246, 0.8)',
+            font: { size: 11 }
+          },
+          grid: { color: 'rgba(148, 163, 184, 0.1)' } 
+        },
+        y1: { 
+          // 우측 Y축 (담장 기준)
+          type: 'linear',
+          display: true,
+          position: 'right',
+          title: {
+            display: true,
+            text: '담장 (우측)',
+            color: 'rgba(34, 197, 94, 0.8)',
+            font: { size: 11 }
+          },
+          grid: { 
+            drawOnChartArea: false // ❗️중요: 좌우 그리드 선이 겹쳐서 지저분해지는 것을 방지
+          } 
+        }
+      },
+      plugins: {
+        legend: {
+          labels: { color: '#e2e8f0', usePointStyle: true, boxWidth: 8 }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          titleColor: '#e2e8f0',
+          bodyColor: '#e2e8f0',
+          borderColor: 'rgba(148, 163, 184, 0.2)',
+          borderWidth: 1
+        }
+      }
+    }
+  });
+}
+
 // --- Helpers ---
 function nowLocal() {
   const d = new Date();
@@ -267,17 +376,30 @@ const ico = {
 
 // ========== RENDER ==========
 function render() {
-  if (selectedId === null) {
-    document.getElementById("dashboardView").classList.remove("hidden");
-    document.getElementById("detailView").classList.add("hidden");
-    if (unsubLogs) { unsubLogs(); unsubLogs = null; }
-    renderAlerts(); renderStats(); renderBigGrid(); renderSmallGrid();
-  } else {
+    if (selectedId === null) {
+        // 대시보드 뷰
+        document.getElementById("dashboardView").classList.remove("hidden");
+        document.getElementById("detailView").classList.add("hidden");
+        
+        // 상세 데이터 리스너 해제
+        if (unsubLogs) { unsubLogs(); unsubLogs = null; }
+        
+        // 컴포넌트 렌더링
+        renderAlerts();
+        renderStats();
+        renderBigGrid();
+        renderSmallGrid();
+        
+        // 👇 차트 렌더링 호출 추가 👇
+        renderChart(); 
+    } else {
     document.getElementById("dashboardView").classList.add("hidden");
     document.getElementById("detailView").classList.remove("hidden");
     renderDetail();
   }
 }
+
+
 
 // ========== ALERT ENGINE ==========
 function generateAlerts() {

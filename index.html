@@ -2,6 +2,9 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TobaccoBug — 사육 관리</title>
   <link rel="stylesheet" href="style.css" />
@@ -23,7 +26,7 @@
         🌿 잎 측정
       </button>
 
-      <button class="btn-icon" onclick="exportJSON()" title="데이터 내보내기">
+      <button class="btn-icon" onclick="exportExcel()" title="엑셀로 내보내기">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
       </button>
     </div>
@@ -43,7 +46,13 @@
         </aside>
         <!-- 우측: 메인 콘텐츠 -->
         <div class="dashboard-main">
+
           <div class="stats-grid" id="statsGrid"></div>
+
+<div class="chart-container" id="chartContainer" style="margin-bottom: 24px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px; padding: 16px;">
+  <canvas id="populationChart" height="70"></canvas>
+</div>
+  
           <div class="section-header">
             <div class="section-label"><span class="section-icon big">🦟</span><span>사육 케이지</span></div>
             <button class="btn-add" onclick="addBigCage()">+ 추가</button>
