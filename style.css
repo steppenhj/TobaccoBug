@@ -256,7 +256,7 @@ body {
 }
 .modal-box {
   background: #0f172a; border: 1px solid rgba(148,163,184,0.15); border-radius: 18px;
-  padding: 24px; width: 100%; max-width: 420px; max-height: 80vh; overflow-y: auto;
+  padding: 24px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto;
 }
 .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 18px; }
 
@@ -412,3 +412,6 @@ select.form-input {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 13px; color: var(--text-3); font-family: var(--mono); }
+
+.chip.miggle { background: var(--purple-dim); color: var(--purple); }
+.status-count-box.purple { background: var(--purple-dim); border: 1px solid rgba(167,139,250,0.15); }

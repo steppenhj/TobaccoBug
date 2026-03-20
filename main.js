@@ -166,13 +166,13 @@ function showSync(state, text) {
 function findCage(id) { return cages.find(c => c.id === id); }
 function bigCages() { return cages.filter(c => c.type === "big").sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true })); }
 function smallCages() { return cages.filter(c => c.type === "small").sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true })); }
+function petriCages() { return cages.filter(c => c.type === "petri").sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true })); }
 
 function nextId(prefix) {
-  const list = prefix === "B" ? bigCages() : smallCages();
+  const list = prefix === "B" ? bigCages() : prefix === "S" ? smallCages() : petriCages();
   const nums = list.map(c => parseInt(c.id.slice(1)));
   return prefix + (Math.max(0, ...nums) + 1);
 }
-
 // ========== FIRESTORE OPS ==========
 
 // Save cage metadata (not logs)
@@ -256,15 +256,16 @@ async function loadAll() {
 }
 
 // Create default cages
+// Create default cages
 async function createDefaults() {
-  const batch = writeBatch(db);
-  for (let i = 1; i <= 10; i++) {
-    batch.set(doc(db, "cages", "B" + i), {
-      type: "big", label: "사육 " + i,
-      currentStatus: { damjangCount: 0, garuiCount: 0, lastChecked: null },
-      updatedAt: new Date().toISOString(),
-    });
-  }
+  const batch = writeBatch(db);
+  for (let i = 1; i <= 10; i++) {
+    batch.set(doc(db, "cages", "B" + i), {
+      type: "big", label: "사육 " + i,
+      currentStatus: { damjangCount: 0, garuiCount: 0, miggleCount: 0, lastChecked: null }, // ✅ 쉼표 추가 완료
+      updatedAt: new Date().toISOString(),
+    });
+  }
   for (let i = 1; i <= 5; i++) {
     batch.set(doc(db, "cages", "S" + i), {
       type: "small", label: "가루이 " + i,
@@ -389,7 +390,7 @@ function render() {
         renderStats();
         renderBigGrid();
         renderSmallGrid();
-        
+        renderPetriGrid();
         // 👇 차트 렌더링 호출 추가 👇
         renderChart(); 
     } else {
@@ -644,6 +645,7 @@ function renderBigGrid() {
     let chips = "";
     if (cs.damjangCount) chips += `<span class="chip damjang">담장 ${cs.damjangCount}</span>`;
     if (cs.garuiCount) chips += `<span class="chip garui">가루이 ${cs.garuiCount}</span>`;
+    if (cs.miggleCount) chips += `<span class="chip miggle">미끌 ${cs.miggleCount}</span>`;
     if (!cs.damjangCount && !cs.garuiCount) chips = `<span class="chip empty-cage">비어있음</span>`;
     const checked = cs.lastChecked ? `확인 ${fmtDateShort(cs.lastChecked)}` : "";
     return `
@@ -676,6 +678,26 @@ function renderSmallGrid() {
   }).join("");
 }
 
+function renderPetriGrid() {
+  document.getElementById("petriCageGrid").innerHTML = petriCages().map(c => {
+    const cs = c.currentStatus || {};
+    let chips = "";
+    if (cs.damjangCount) chips += `<span class="chip damjang">담장 ${cs.damjangCount}</span>`;
+    if (cs.garuiCount) chips += `<span class="chip garui">가루이 ${cs.garuiCount}</span>`;
+    if (cs.miggleCount) chips += `<span class="chip miggle">미끌 ${cs.miggleCount}</span>`;
+    if (!cs.damjangCount && !cs.garuiCount && !cs.miggleCount) chips = `<span class="chip empty-cage">비어있음</span>`;
+    const checked = cs.lastChecked ? `확인 ${fmtDateShort(cs.lastChecked)}` : "";
+    
+    return `
+    <button class="cage-card petri" onclick="window._openCage('${c.id}')" style="border-color: rgba(245,158,11,0.2);">
+      <div class="cage-card-top"><span class="cage-code petri" style="color:var(--amber); background:var(--amber-dim);">${c.id}</span></div>
+      <div class="cage-label">${esc(c.label)}</div>
+      <div class="cage-chips">${chips}</div>
+      <div class="cage-meta">${checked}${c.logs.length ? (checked ? " · " : "") + "기록 " + c.logs.length : ""}</div>
+    </button>`;
+  }).join("");
+}
+
 // ========== DETAIL ==========
 function openCage(id) {
   selectedId = id;
@@ -683,22 +705,35 @@ function openCage(id) {
   render();
 }
 
+// renderDetail() 함수 내부를 다음과 같이 수정합니다.
 function renderDetail() {
   const cage = findCage(selectedId);
   if (!cage) { selectedId = null; render(); return; }
+  
   const isBig = cage.type === "big";
+  const isSmall = cage.type === "small";
+  const isPetri = cage.type === "petri";
 
-  document.getElementById("detailBadge").textContent = cage.id;
-  document.getElementById("detailBadge").className = "cage-badge " + (isBig ? "big" : "small");
+  // 뱃지 클래스 변경
+  let badgeClass = isBig ? "big" : isSmall ? "small" : "petri";
+  document.getElementById("detailBadge").className = "cage-badge " + badgeClass;
 
+  // 이름 입력
   const nameInput = document.getElementById("detailNameInput");
   nameInput.value = cage.label;
-  nameInput.onchange = () => { cage.label = nameInput.value.trim() || cage.label; saveCage(cage); };
+  nameInput.onchange = () => {
+    cage.label = nameInput.value.trim() || cage.label;
+    saveCage(cage);
+  };
 
+  // 삭제 버튼
   document.getElementById("detailDeleteBtn").onclick = () => {
-    const msg = cage.logs.length ? `${cage.label}에 ${cage.logs.length}개 기록 있음. 정말 삭제?` : `${cage.label} 삭제?`;
-    if (!confirm(msg)) return;
-    removeCage(cage.id).then(() => { selectedId = null; render(); });
+    if (!confirm(`"${cage.label}" 케이지를 삭제할까요? 모든 기록이 사라집니다.`)) return;
+    removeCage(selectedId).then(() => {
+      selectedId = null;
+      if (unsubLogs) { unsubLogs(); unsubLogs = null; }
+      render();
+    });
   };
 
   const statusArea = document.getElementById("detailStatusArea");
@@ -707,9 +742,13 @@ function renderDetail() {
   if (isBig) {
     renderBigStatus(cage, statusArea);
     renderBigLogs(cage, logArea);
-  } else {
+  } else if (isSmall) {
     renderSmallStatus(cage, statusArea);
     renderSmallLogs(cage, logArea);
+  } else if (isPetri) {
+    // 페트리 디쉬는 큰 사육장(Big)과 상태 및 기록 형식이 비슷할 것 같아 Big 로직을 재사용합니다.
+    renderBigStatus(cage, statusArea);
+    renderBigLogs(cage, logArea);
   }
 }
 
@@ -723,6 +762,8 @@ function renderBigStatus(cage, el) {
           <div class="status-count-value">${cs.damjangCount || 0}<span class="status-count-unit">마리</span></div></div>
         <div class="status-count-box blue"><div class="status-count-label">가루이</div>
           <div class="status-count-value">${cs.garuiCount || 0}<span class="status-count-unit">마리</span></div></div>
+          <div class="status-count-box purple"><div class="status-count-label">미끌</div>
+  <div class="status-count-value">${cs.miggleCount || 0}<span class="status-count-unit">마리</span></div></div>
         <button class="btn-update-status" onclick="window._openStatusModal()">${ico.check} 상태 업데이트</button>
       </div>
     </div>`;
@@ -782,14 +823,14 @@ function logBadge(kind) {
 function logText(l, cage) {
   switch (l.kind) {
     case "input": {
-      const sp = l.species === "담장" ? `<span style="color:var(--green)">담장</span>` : `<span style="color:var(--blue)">가루이</span>`;
+      const sp = l.species === "담장" ? `<span style="color:var(--green)">담장</span>` : l.species === "미끌" ? `<span style="color:var(--purple)">미끌</span>`: `<span style="color:var(--blue)">가루이</span>`;
       let s = `${sp} ${l.count}마리`;
       if (l.fromId) s += ` <span class="transfer-arrow"><span class="arr">←</span> <span class="from">${esc(l.fromId)}</span></span>`;
       if (l.memo) s += ` · ${esc(l.memo)}`;
       return s;
     }
     case "release": {
-      const sp = l.species === "담장" ? `<span style="color:var(--green)">담장</span>` : `<span style="color:var(--blue)">가루이</span>`;
+      const sp = l.species === "담장" ? `<span style="color:var(--green)">담장</span>` : l.species === "미끌" ? `<span style="color:var(--purple)">미끌</span>`: `<span style="color:var(--blue)">가루이</span>`;
       return `${sp} ${l.count}마리 방사${l.memo ? " · " + esc(l.memo) : ""}`;
     }
     case "density": {
@@ -824,6 +865,8 @@ function openStatusModal() {
         <input type="number" id="mDamjang" class="form-input" value="${cs.damjangCount || 0}" min="0" /></div>
       <div class="form-field"><label class="form-label">🌿 가루이</label>
         <input type="number" id="mGarui" class="form-input" value="${cs.garuiCount || 0}" min="0" /></div>
+        <div class="form-field"><label class="form-label">🐞 미끌</label>
+  <input type="number" id="mMiggle" class="form-input" value="${cs.miggleCount || 0}" min="0" /></div>
     </div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeModal()">취소</button>
@@ -835,6 +878,7 @@ function saveStatus() {
   cage.currentStatus = {
     damjangCount: Number(document.getElementById("mDamjang").value) || 0,
     garuiCount: Number(document.getElementById("mGarui").value) || 0,
+    miggleCount: Number(document.getElementById("mMiggle").value) || 0,
     lastChecked: new Date().toISOString(),
   };
   saveCage(cage).then(() => { closeModal(); renderDetail(); });
@@ -861,17 +905,23 @@ function saveSmallStatus() {
 function openInputModal() {
   const smOpts = smallCages().map(c => `<option value="${c.id}">${c.id} - ${esc(c.label)}</option>`).join("");
   const bgOpts = bigCages().filter(c => c.id !== selectedId).map(c => `<option value="${c.id}">${c.id} - ${esc(c.label)}</option>`).join("");
+  const ptOpts = petriCages().filter(c => c.id !== selectedId).map(c => `<option value="${c.id}">${c.id} - ${esc(c.label)}</option>`).join("");
   openModal("투입 기록", `
     <div class="form-field"><label class="form-label">일시</label>
       <input type="datetime-local" id="mDate" class="form-input" value="${nowLocal()}" /></div>
     <div class="form-row">
       <div class="form-field"><label class="form-label">종류</label>
-        <select id="mSpecies" class="form-input"><option value="가루이">🌿 가루이</option><option value="담장">🦟 담장</option></select></div>
+        <select id="mSpecies" class="form-input">
+          <option value="가루이">🌿 가루이</option>
+          <option value="담장">🦟 담장</option>
+          <option value="미끌">🐞 미끌</option>
+        </select>
+      </div>
       <div class="form-field"><label class="form-label">마릿수</label>
         <input type="number" id="mCount" class="form-input" placeholder="0" min="1" /></div>
     </div>
     <div class="form-field"><label class="form-label">가져온 곳 (선택)</label>
-      <select id="mFrom" class="form-input"><option value="">해당 없음</option>${smOpts}${bgOpts}<option value="외부">외부</option></select></div>
+      <select id="mFrom" class="form-input"><option value="">해당 없음</option>${smOpts}${bgOpts}${ptOpts}<option value="외부">외부</option></select></div>
     <div class="form-field"><label class="form-label">메모 (선택)</label>
       <input id="mMemo" class="form-input" placeholder="예: 밀도 높은 식물 선별 투입" /></div>
     <div class="modal-actions">
@@ -965,19 +1015,22 @@ function saveNote() {
 async function addBigCage() {
   const id = nextId("B");
   const n = parseInt(id.slice(1));
-  const cage = { type: "big", label: "사육 " + n, currentStatus: { damjangCount: 0, garuiCount: 0, lastChecked: null } };
+  const cage = { type: "big", label: "사육 " + n, currentStatus: { damjangCount: 0, garuiCount: 0, miggleCount: 0, lastChecked: null } };
   await setDoc(doc(db, "cages", id), { ...cage, updatedAt: new Date().toISOString() });
-  cages.push({ ...cage, id, logs: [] });
-  render();
 }
 async function addSmallCage() {
   const id = nextId("S");
   const n = parseInt(id.slice(1));
   const cage = { type: "small", label: "가루이 " + n, currentStatus: { garuiCount: 0, lastChecked: null } };
   await setDoc(doc(db, "cages", id), { ...cage, updatedAt: new Date().toISOString() });
-  cages.push({ ...cage, id, logs: [] });
-  render();
 }
+async function addPetriCage() {
+  const id = nextId("P");
+  const n = parseInt(id.slice(1));
+  const cage = { type: "petri", label: "페트리 " + n, currentStatus: { damjangCount: 0, garuiCount: 0, miggleCount: 0, lastChecked: null } };
+  await setDoc(doc(db, "cages", id), { ...cage, updatedAt: new Date().toISOString() });
+}
+// 전역 변수 등록도 잊지 마세요 (window.addPetriCage = addPetriCage;)
 
 // ========== EXPORT ==========
 function exportJSON() {
@@ -1006,6 +1059,7 @@ window._openNoteModal = openNoteModal;
 window._saveNote = saveNote;
 window.addBigCage = addBigCage;
 window.addSmallCage = addSmallCage;
+window.addPetriCage = addPetriCage;
 window.goBack = () => { selectedId = null; if (unsubLogs) { unsubLogs(); unsubLogs = null; } render(); };
 window.closeModal = closeModal;
 window.exportJSON = exportJSON;

@@ -26,7 +26,7 @@
         🌿 잎 측정
       </button>
 
-      <button class="btn-icon" onclick="exportExcel()" title="엑셀로 내보내기">
+      <button class="btn-icon" onclick="exportJSON()" title="JSON으로 내보내기">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
       </button>
     </div>
@@ -63,6 +63,12 @@
             <button class="btn-add" onclick="addSmallCage()">+ 추가</button>
           </div>
           <div class="cage-grid" id="smallCageGrid"></div>
+
+          <div class="section-header" style="margin-top:28px">
+  <div class="section-label"><span class="section-icon petri" style="background: var(--amber-dim);">🧫</span><span>페트리 디쉬</span></div>
+  <button class="btn-add" onclick="addPetriCage()">+ 추가</button>
+</div>
+<div class="cage-grid" id="petriCageGrid"></div>
         </div>
       </div>
     </div>
