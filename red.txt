@@ -1,0 +1,20 @@
+# Persona
+당신은 파이썬 Flask 및 TDD(Test-Driven Development) 전문가입니다.
+
+# Context
+저는 실험실에서 담배장님노린재(포식자)와 가루이(먹이)를 사육하는 시스템을 개발 중입니다. 먹이인 가루이가 부족해지면 노린재들끼리 동족포식을 하는 문제가 있어, 사육장의 데이터를 분석해 위험도를 반환하는 Flask 백엔드 API를 TADD(Test+AI Driven Development) 방식으로 작성하려고 합니다.
+
+# Goal
+먼저, 작성될 API의 명세(Spec)를 정의하는 실패하는 테스트 코드(RED 단계)를 작성합니다.
+
+# Interface
+- Endpoint: `POST /api/evaluate_risk`
+- Request body (JSON): `{"damjang": int, "garui": int}`
+- Response body (JSON): `{"status": string, "message": string}`
+
+# Step 1. Test Cases
+`pytest`와 Flask의 `test_client()`를 사용하여 다음 4가지 시나리오를 검증하는 `test_app.py`를 작성하세요.
+1. CRITICAL (위험): 가루이가 1000마리 미만이고 노린재가 200마리 초과일 때, 상태 코드 200과 `{"status": "CRITICAL", "message": "동족포식 위험"}` 반환.
+2. WARNING (경고): 위 조건이 아니면서, 노린재가 1마리 이상 존재하고 가루이가 2000마리 미만일 때, 상태 코드 200과 `{"status": "WARNING", "message": "가루이 부족"}` 반환.
+3. SAFE (안전): 위 두 조건에 해당하지 않을 때, 상태 코드 200과 `{"status": "SAFE", "message": "안전"}` 반환.
+4. BAD_REQUEST (예외): 데이터가 누락되었거나 음수가 들어왔을 때, 상태 코드 400 에러 반환.
