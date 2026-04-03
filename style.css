@@ -164,11 +164,6 @@ body {
 }
 .btn-danger-sm:hover { background: rgba(239,68,68,0.2); }
 
-/* Status selector area */
-.status-area {
-  background: var(--bg-card); border: 1px solid var(--border-light);
-  border-radius: 12px; padding: 14px 16px; margin-bottom: 20px;
-}
 .status-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .status-label { font-size: 12px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
 .status-btn {
