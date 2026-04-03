@@ -1,6 +1,3 @@
-# 기존에는 js로 사용 중이므로,
-# 리팩토링 할 함수만
-# python으로 가지고 왔습니다.
 import time
 
 def generate_alerts(cages):

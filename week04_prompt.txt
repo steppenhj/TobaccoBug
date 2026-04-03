@@ -1,0 +1,25 @@
+문제
+1. 객체지향 남용 - 조건문 과다
+2. 너무 긴 메서드 - 하나의 메서드가 많은 기능 담당
+3. Divergent change - 하나의 클래스에 여러 규칙이 있음
+4. 하드코딩 - 숫자들이 하드코딩되어 추후 수정이 힘듦
+5. Data Clumps - 여러 데이터가 여기저기에서 함께 사용됨
+
+[Developer's Prompt]
+"이 알림 생성 로직(generateAlerts)은 OCP와 SRP를 위반하고 있으며, if/elif 남용이 심해. 
+이 코드를 객체지향적으로 리팩토링할 수 있는 3가지 전략을 제안하고 각각의 장단점을 설명해 줘." 
+
+[AI's Proposed Strategies]
+Extract Method & Replace Magic Numbers: 조건별로 함수를 잘게 쪼개고 하드코딩된 숫자를 상수로 추출합니다. 
+(장점: 구현이 빠름 / 단점: 근본적인 OCP 위반은 해결되지 않음) 
+
+Strategy / Specification Pattern: AlertRule이라는 추상 인터페이스를 만들고, CannibalismRule, StarvationRule 등 개별 규칙을 클래스로 분리합니다. 
+(장점: OCP 완벽 준수, 새로운 규칙 추가 용이 / 단점: 초기 클래스 설계에 시간이 듦) 
+
+Chain of Responsibility Pattern: 케이지 데이터를 규칙들의 체인에 통과시켜 알림을 누적합니다. 
+(장점: 규칙 적용 순서 제어 가능 / 단점: 디버깅이 약간 까다로울 수 있음)
+
+💡 Decision & Review Process결정: 
+**Strategy Pattern (옵션 2)**를 선택했습니다.
+이유: 천적곤충학 연구의 특성상 실험 환경에 따라 '동족포식 위험 수치'나 '식물 고사 임계일' 같은 비즈니스 룰이 수시로 추가되거나 변경될 수 있습니다. 
+AlertRule 인터페이스를 상속받는 구조를 채택하면, 기존 코드를 전혀 건드리지 않고도 새로운 곤충 종(예: 미끌)에 대한 새로운 규칙 클래스만 추가하면 되므로 OCP(Open/Closed Principle)와 SRP(Single Responsibility Principle)를 완벽하게 만족시킬 수 있기 때문입니다.
