@@ -1,2 +1,5 @@
 flask
+flasgger
 firebase-admin
+sphinx
+sphinx-rtd-theme
