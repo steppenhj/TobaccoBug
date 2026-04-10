@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TobaccoBug — 사육 관리</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/static/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 </head>
 <body>
@@ -21,8 +21,8 @@
     </div>
     <div class="header-right" style="align-items: center;">
       <span id="syncStatus" class="sync-status"></span>
-      
-      <button class="btn-icon" onclick="window.location.href='measure.html'" title="잎 크기 측정" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; font-family: inherit;">
+
+      <button class="btn-icon" onclick="window.location.href='/measure'" title="잎 크기 측정" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; font-family: inherit;">
         🌿 잎 측정
       </button>
 
@@ -49,10 +49,10 @@
 
           <div class="stats-grid" id="statsGrid"></div>
 
-      <div class="chart-container" id="chartContainer" style="margin-bottom: 24px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px; padding: 16px;">
-        <canvas id="populationChart" height="70"></canvas>
-      </div>
-  
+          <div class="chart-container" id="chartContainer" style="margin-bottom: 24px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px; padding: 16px;">
+            <canvas id="populationChart" height="70"></canvas>
+          </div>
+
           <div class="section-header">
             <div class="section-label"><span class="section-icon big">🦟</span><span>사육 케이지</span></div>
             <button class="btn-add" onclick="addBigCage()">+ 추가</button>
@@ -65,10 +65,10 @@
           <div class="cage-grid" id="smallCageGrid"></div>
 
           <div class="section-header" style="margin-top:28px">
-  <div class="section-label"><span class="section-icon petri" style="background: var(--amber-dim);">🧫</span><span>페트리 디쉬</span></div>
-  <button class="btn-add" onclick="addPetriCage()">+ 추가</button>
-</div>
-<div class="cage-grid" id="petriCageGrid"></div>
+            <div class="section-label"><span class="section-icon petri" style="background: var(--amber-dim);">🧫</span><span>페트리 디쉬</span></div>
+            <button class="btn-add" onclick="addPetriCage()">+ 추가</button>
+          </div>
+          <div class="cage-grid" id="petriCageGrid"></div>
         </div>
       </div>
     </div>
@@ -99,7 +99,6 @@
     </div>
   </div>
 
-  <!-- Firebase SDK -->
-  <script type="module" src="main.js"></script>
+  <script type="module" src="/static/main.js"></script>
 </body>
 </html>
