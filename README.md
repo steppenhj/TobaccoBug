@@ -4,7 +4,7 @@
 
 ## 📸 Visual Demonstration
 
-![TobaccoBug 대시보드 화면 캡쳐](assets/dashboard.jpg)
+![TobaccoBug 대시보드 화면 캡쳐](assets/dashboard.png)
 
 🎯 Motivation & Problem
 담배장님노린재는 해충 방제에 탁월한 천적 곤충이지만, 포식자와 먹이(가루이 등)의 비율, 동족포식 위험, 케이지별 밀도 등을 정밀하게 관리해야만 성공적으로 사육할 수 있습니다.
