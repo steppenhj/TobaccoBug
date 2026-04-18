@@ -25,18 +25,18 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install sphinx sphinx-rtd-theme flasgger flask firebase-admin
+        run: pip install sphinx sphinx-rtd-theme flasgger flask
 
       - name: Build Sphinx HTML
-        run: cd my-flask-project/docs && make html
+        run: cd tobaccobug/docs && make html
 
       - name: Add .nojekyll (GitHub Pages 정적 파일 처리)
-        run: touch my-flask-project/docs/build/html/.nojekyll
+        run: touch tobaccobug/docs/build/html/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: my-flask-project/docs/build/html
+          path: tobaccobug/docs/build/html
 
   deploy:
     environment:

@@ -1,0 +1,143 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ko" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>migrate_from_firebase module &mdash; TobaccoBug 1.0.0 문서</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5a0dd2f0"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="_static/translations.js?v=afa94a99"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="색인" href="genindex.html" />
+    <link rel="search" title="검색" href="search.html" />
+    <link rel="prev" title="Flask 애플리케이션 (app.py)" href="app.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            TobaccoBug
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">코드 문서</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="app.html">Flask 애플리케이션 (app.py)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">migrate_from_firebase module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#migrate_from_firebase.init_db"><code class="docutils literal notranslate"><span class="pre">init_db()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#migrate_from_firebase.migrate"><code class="docutils literal notranslate"><span class="pre">migrate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">TobaccoBug</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">migrate_from_firebase module</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/steppenhj/TobaccoBug/blob/main/my-flask-project/docs/source/migrate_from_firebase.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="migrate-from-firebase-module">
+<h1>migrate_from_firebase module<a class="headerlink" href="#migrate-from-firebase-module" title="Link to this heading"></a></h1>
+<div class="admonition note">
+<p class="admonition-title">참고</p>
+<p>이 스크립트는 <strong>이미 완료된 일회성 마이그레이션 도구</strong> 입니다.</p>
+<p>초기 개발 단계에서 Firebase Firestore를 백엔드로 사용하다가,
+과제 요건(Sphinx 문서화, 순수 Python 서버)을 충족하기 위해
+Flask + SQLite 구조로 전환하면서 기존 데이터를 옮기는 데 사용했습니다.</p>
+<p>현재 앱은 SQLite(<code class="docutils literal notranslate"><span class="pre">tobaccobug.db</span></code>)만 사용하므로 이 스크립트를 다시
+실행할 필요가 없습니다. 재실행이 필요한 경우에만 <code class="docutils literal notranslate"><span class="pre">firebase-admin</span></code>
+패키지를 설치하고, <code class="docutils literal notranslate"><span class="pre">serviceAccountKey.json``을</span> <span class="pre">준비하세요.</span>
+<span class="pre">(``serviceAccountKey.json.example</span></code> 참고)</p>
+</div>
+<p id="module-migrate_from_firebase">Firebase Firestore → SQLite 마이그레이션 스크립트</p>
+<dl class="simple">
+<dt>사용법:</dt><dd><ol class="arabic simple">
+<li><p>Firebase Console → 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성</p></li>
+<li><p>다운로드한 JSON 파일을 이 파일과 같은 폴더에 ‘serviceAccountKey.json’ 이름으로 저장</p></li>
+<li><p>실행: python migrate_from_firebase.py</p></li>
+</ol>
+</dd>
+</dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="migrate_from_firebase.init_db">
+<span class="sig-prename descclassname"><span class="pre">migrate_from_firebase.</span></span><span class="sig-name descname"><span class="pre">init_db</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/migrate_from_firebase.html#init_db"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#migrate_from_firebase.init_db" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="migrate_from_firebase.migrate">
+<span class="sig-prename descclassname"><span class="pre">migrate_from_firebase.</span></span><span class="sig-name descname"><span class="pre">migrate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/migrate_from_firebase.html#migrate"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#migrate_from_firebase.migrate" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="app.html" class="btn btn-neutral float-left" title="Flask 애플리케이션 (app.py)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Park Haejin.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

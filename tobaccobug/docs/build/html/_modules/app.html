@@ -1,0 +1,574 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ko" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>app &mdash; TobaccoBug 1.0.0 문서</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5a0dd2f0"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../_static/translations.js?v=afa94a99"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="색인" href="../genindex.html" />
+    <link rel="search" title="검색" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            TobaccoBug
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">코드 문서</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../app.html">Flask 애플리케이션 (app.py)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../migrate_from_firebase.html">migrate_from_firebase module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">TobaccoBug</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">모듈 코드</a></li>
+      <li class="breadcrumb-item active">app</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>app의 소스 코드</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">TobaccoBug Flask Application</span>
+<span class="sd">=============================</span>
+
+<span class="sd">담배장님노린재(*Nesidiocoris tenuis*) 사육 관리 시스템의 Flask 백엔드.</span>
+<span class="sd">SQLite 데이터베이스를 사용하며 케이지 및 활동 로그에 대한 REST API를 제공합니다.</span>
+
+<span class="sd">Swagger UI:  http://localhost:5000/apidocs</span>
+<span class="sd">GitHub Pages: https://steppenhj.github.io/TobaccoBug/</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">render_template</span><span class="p">,</span> <span class="n">jsonify</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">g</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flasgger</span><span class="w"> </span><span class="kn">import</span> <span class="n">Swagger</span>
+
+<span class="n">DATABASE</span> <span class="o">=</span> <span class="s1">&#39;tobaccobug.db&#39;</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1"># ========== Swagger 설정 ==========</span>
+
+<span class="n">swagger_template</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;info&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;TobaccoBug 사육 관리 API&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="p">(</span>
+            <span class="s2">&quot;담배장님노린재(*Nesidiocoris tenuis*) 사육 관리 시스템 REST API.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;케이지(Cage) 및 활동 로그(Log) CRUD 엔드포인트를 제공합니다.&quot;</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;contact&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Park Haejin&quot;</span><span class="p">,</span> <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;https://github.com/steppenhj/TobaccoBug&quot;</span><span class="p">},</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Cages&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;사육 케이지 관리&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Logs&quot;</span><span class="p">,</span>  <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;케이지별 활동 로그 관리&quot;</span><span class="p">},</span>
+    <span class="p">],</span>
+<span class="p">}</span>
+
+<span class="n">swagger_config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;headers&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="s2">&quot;specs&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;endpoint&quot;</span><span class="p">:</span> <span class="s2">&quot;apispec&quot;</span><span class="p">,</span> <span class="s2">&quot;route&quot;</span><span class="p">:</span> <span class="s2">&quot;/apispec.json&quot;</span><span class="p">}],</span>
+    <span class="s2">&quot;swagger_ui&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s2">&quot;specs_route&quot;</span><span class="p">:</span> <span class="s2">&quot;/apidocs&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">swagger</span> <span class="o">=</span> <span class="n">Swagger</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">swagger_config</span><span class="p">,</span> <span class="n">template</span><span class="o">=</span><span class="n">swagger_template</span><span class="p">)</span>
+
+<span class="c1"># ========== DB 연결 ==========</span>
+
+<div class="viewcode-block" id="get_db">
+<a class="viewcode-back" href="../app.html#app.get_db">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_db</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;현재 요청 컨텍스트에서 SQLite 연결을 반환합니다.&quot;&quot;&quot;</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">&#39;_database&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">db</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">_database</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DATABASE</span><span class="p">)</span>
+        <span class="n">db</span><span class="o">.</span><span class="n">row_factory</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Row</span>
+        <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">db</span></div>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">teardown_appcontext</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">close_connection</span><span class="p">(</span><span class="n">_exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;요청 종료 시 DB 연결을 닫습니다.&quot;&quot;&quot;</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">&#39;_database&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">db</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">db</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<div class="viewcode-block" id="init_db">
+<a class="viewcode-back" href="../app.html#app.init_db">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">init_db</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    DB를 초기화하고, 케이지가 없으면 기본값(B1~B10, S1~S5)을 생성합니다.</span>
+
+<span class="sd">    테이블 구조:</span>
+
+<span class="sd">    - **cages**: id, type, label, current_status(JSON), updated_at</span>
+<span class="sd">    - **logs**: id, cage_id, kind, date, data(JSON), created_at</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DATABASE</span><span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        CREATE TABLE IF NOT EXISTS cages (</span>
+<span class="s2">            id             TEXT PRIMARY KEY,</span>
+<span class="s2">            type           TEXT NOT NULL,</span>
+<span class="s2">            label          TEXT NOT NULL,</span>
+<span class="s2">            current_status TEXT DEFAULT &#39;</span><span class="si">{}</span><span class="s2">&#39;,</span>
+<span class="s2">            updated_at     TEXT</span>
+<span class="s2">        )</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        CREATE TABLE IF NOT EXISTS logs (</span>
+<span class="s2">            id         TEXT PRIMARY KEY,</span>
+<span class="s2">            cage_id    TEXT NOT NULL,</span>
+<span class="s2">            kind       TEXT NOT NULL,</span>
+<span class="s2">            date       TEXT,</span>
+<span class="s2">            data       TEXT DEFAULT &#39;</span><span class="si">{}</span><span class="s2">&#39;,</span>
+<span class="s2">            created_at TEXT,</span>
+<span class="s2">            FOREIGN KEY (cage_id) REFERENCES cages(id) ON DELETE CASCADE</span>
+<span class="s2">        )</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="p">)</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT COUNT(*) FROM cages&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">):</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                <span class="s2">&quot;INSERT INTO cages VALUES (?, ?, ?, ?, ?)&quot;</span><span class="p">,</span>
+                <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;B</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;big&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;사육 </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                 <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">&quot;damjangCount&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;garuiCount&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;miggleCount&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;lastChecked&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}),</span>
+                 <span class="n">now</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">):</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                <span class="s2">&quot;INSERT INTO cages VALUES (?, ?, ?, ?, ?)&quot;</span><span class="p">,</span>
+                <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;S</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;small&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;가루이 </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                 <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">&quot;garuiCount&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;lastChecked&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}),</span>
+                 <span class="n">now</span><span class="p">)</span>
+            <span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1"># ========== 변환 헬퍼 ==========</span>
+
+<div class="viewcode-block" id="cage_row_to_dict">
+<a class="viewcode-back" href="../app.html#app.cage_row_to_dict">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">cage_row_to_dict</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">logs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;SQLite Row를 케이지 딕셔너리로 변환합니다.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;id&#39;</span><span class="p">:</span>            <span class="n">row</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;type&#39;</span><span class="p">:</span>          <span class="n">row</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;label&#39;</span><span class="p">:</span>         <span class="n">row</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;currentStatus&#39;</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;current_status&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;updatedAt&#39;</span><span class="p">:</span>     <span class="n">row</span><span class="p">[</span><span class="s1">&#39;updated_at&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;logs&#39;</span><span class="p">:</span>          <span class="n">logs</span> <span class="ow">or</span> <span class="p">[],</span>
+    <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="log_row_to_dict">
+<a class="viewcode-back" href="../app.html#app.log_row_to_dict">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">log_row_to_dict</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;SQLite Row를 로그 딕셔너리로 변환합니다.&quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;_id&#39;</span><span class="p">:</span>       <span class="n">row</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;kind&#39;</span><span class="p">:</span>      <span class="n">row</span><span class="p">[</span><span class="s1">&#39;kind&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;date&#39;</span><span class="p">:</span>      <span class="n">row</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;createdAt&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;created_at&#39;</span><span class="p">],</span>
+        <span class="o">**</span><span class="n">data</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+<span class="c1"># ========== 화면 라우트 ==========</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">index</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;메인 대시보드 HTML 페이지를 렌더링합니다.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s1">&#39;index.html&#39;</span><span class="p">)</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/measure&#39;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">measure</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;잎 크기 측정 HTML 페이지를 렌더링합니다.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s1">&#39;measure.html&#39;</span><span class="p">)</span>
+
+<span class="c1"># ========== REST API — 케이지 ==========</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/cages&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_cages</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;모든 케이지와 로그를 조회합니다.</span>
+<span class="sd">    ---</span>
+<span class="sd">    tags:</span>
+<span class="sd">      - Cages</span>
+<span class="sd">    summary: 모든 케이지 조회</span>
+<span class="sd">    description: 등록된 모든 케이지(big/small/petri)와 각 케이지의 활동 로그를 함께 반환합니다.</span>
+<span class="sd">    responses:</span>
+<span class="sd">      200:</span>
+<span class="sd">        description: 케이지 목록 (로그 포함)</span>
+<span class="sd">        schema:</span>
+<span class="sd">          type: array</span>
+<span class="sd">          items:</span>
+<span class="sd">            type: object</span>
+<span class="sd">            properties:</span>
+<span class="sd">              id:</span>
+<span class="sd">                type: string</span>
+<span class="sd">                example: &quot;B1&quot;</span>
+<span class="sd">              type:</span>
+<span class="sd">                type: string</span>
+<span class="sd">                enum: [big, small, petri]</span>
+<span class="sd">                example: &quot;big&quot;</span>
+<span class="sd">              label:</span>
+<span class="sd">                type: string</span>
+<span class="sd">                example: &quot;사육 1&quot;</span>
+<span class="sd">              currentStatus:</span>
+<span class="sd">                type: object</span>
+<span class="sd">                example: {&quot;damjangCount&quot;: 10, &quot;garuiCount&quot;: 500, &quot;lastChecked&quot;: &quot;2026-04-10T09:00:00&quot;}</span>
+<span class="sd">              updatedAt:</span>
+<span class="sd">                type: string</span>
+<span class="sd">                example: &quot;2026-04-10T09:00:00&quot;</span>
+<span class="sd">              logs:</span>
+<span class="sd">                type: array</span>
+<span class="sd">                items:</span>
+<span class="sd">                  type: object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">get_db</span><span class="p">()</span>
+    <span class="n">cages</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM cages ORDER BY type, id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">cage</span> <span class="ow">in</span> <span class="n">cages</span><span class="p">:</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;SELECT * FROM logs WHERE cage_id = ? ORDER BY date DESC&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">cage</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],)</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cage_row_to_dict</span><span class="p">(</span><span class="n">cage</span><span class="p">,</span> <span class="p">[</span><span class="n">log_row_to_dict</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">logs</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/cages&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_cage</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;새 케이지를 생성합니다.</span>
+<span class="sd">    ---</span>
+<span class="sd">    tags:</span>
+<span class="sd">      - Cages</span>
+<span class="sd">    summary: 케이지 생성</span>
+<span class="sd">    description: 새로운 사육 케이지(big/small/petri)를 DB에 저장합니다.</span>
+<span class="sd">    parameters:</span>
+<span class="sd">      - in: body</span>
+<span class="sd">        name: body</span>
+<span class="sd">        required: true</span>
+<span class="sd">        schema:</span>
+<span class="sd">          type: object</span>
+<span class="sd">          required: [id, type, label]</span>
+<span class="sd">          properties:</span>
+<span class="sd">            id:</span>
+<span class="sd">              type: string</span>
+<span class="sd">              example: &quot;B11&quot;</span>
+<span class="sd">            type:</span>
+<span class="sd">              type: string</span>
+<span class="sd">              enum: [big, small, petri]</span>
+<span class="sd">              example: &quot;big&quot;</span>
+<span class="sd">            label:</span>
+<span class="sd">              type: string</span>
+<span class="sd">              example: &quot;사육 11&quot;</span>
+<span class="sd">            currentStatus:</span>
+<span class="sd">              type: object</span>
+<span class="sd">              example: {&quot;damjangCount&quot;: 0, &quot;garuiCount&quot;: 0, &quot;miggleCount&quot;: 0, &quot;lastChecked&quot;: null}</span>
+<span class="sd">    responses:</span>
+<span class="sd">      201:</span>
+<span class="sd">        description: 생성된 케이지</span>
+<span class="sd">      400:</span>
+<span class="sd">        description: id 필드 누락</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span> <span class="ow">or</span> <span class="s1">&#39;id&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;id is required&#39;</span><span class="p">}),</span> <span class="mi">400</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">get_db</span><span class="p">()</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+        <span class="s2">&quot;INSERT INTO cages (id, type, label, current_status, updated_at) VALUES (?, ?, ?, ?, ?)&quot;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;big&#39;</span><span class="p">),</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]),</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;currentStatus&#39;</span><span class="p">,</span> <span class="p">{})),</span>
+            <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">cage</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM cages WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],))</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">cage_row_to_dict</span><span class="p">(</span><span class="n">cage</span><span class="p">)),</span> <span class="mi">201</span>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/cages/&lt;cage_id&gt;&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">update_cage</span><span class="p">(</span><span class="n">cage_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;케이지 이름 또는 현재 상태를 수정합니다.</span>
+<span class="sd">    ---</span>
+<span class="sd">    tags:</span>
+<span class="sd">      - Cages</span>
+<span class="sd">    summary: 케이지 수정</span>
+<span class="sd">    description: 케이지의 label(이름)이나 currentStatus(담장/가루이 수 등)를 업데이트합니다.</span>
+<span class="sd">    parameters:</span>
+<span class="sd">      - in: path</span>
+<span class="sd">        name: cage_id</span>
+<span class="sd">        required: true</span>
+<span class="sd">        type: string</span>
+<span class="sd">        example: &quot;B1&quot;</span>
+<span class="sd">      - in: body</span>
+<span class="sd">        name: body</span>
+<span class="sd">        required: true</span>
+<span class="sd">        schema:</span>
+<span class="sd">          type: object</span>
+<span class="sd">          properties:</span>
+<span class="sd">            label:</span>
+<span class="sd">              type: string</span>
+<span class="sd">              example: &quot;사육 1 (수정)&quot;</span>
+<span class="sd">            currentStatus:</span>
+<span class="sd">              type: object</span>
+<span class="sd">              example: {&quot;damjangCount&quot;: 50, &quot;garuiCount&quot;: 1200, &quot;miggleCount&quot;: 0, &quot;lastChecked&quot;: &quot;2026-04-10T09:00:00&quot;}</span>
+<span class="sd">    responses:</span>
+<span class="sd">      200:</span>
+<span class="sd">        description: 수정된 케이지</span>
+<span class="sd">      404:</span>
+<span class="sd">        description: 케이지 없음</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;body required&#39;</span><span class="p">}),</span> <span class="mi">400</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">get_db</span><span class="p">()</span>
+    <span class="n">cage</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM cages WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">cage_id</span><span class="p">,))</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">cage</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;not found&#39;</span><span class="p">}),</span> <span class="mi">404</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+        <span class="s2">&quot;UPDATE cages SET label = ?, current_status = ?, updated_at = ? WHERE id = ?&quot;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">,</span> <span class="n">cage</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]),</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;currentStatus&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">cage</span><span class="p">[</span><span class="s1">&#39;current_status&#39;</span><span class="p">]))),</span>
+            <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+            <span class="n">cage_id</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">cage</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM cages WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">cage_id</span><span class="p">,))</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">cage_row_to_dict</span><span class="p">(</span><span class="n">cage</span><span class="p">))</span>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/cages/&lt;cage_id&gt;&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;DELETE&#39;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">delete_cage</span><span class="p">(</span><span class="n">cage_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;케이지와 모든 로그를 삭제합니다.</span>
+<span class="sd">    ---</span>
+<span class="sd">    tags:</span>
+<span class="sd">      - Cages</span>
+<span class="sd">    summary: 케이지 삭제</span>
+<span class="sd">    description: 케이지와 해당 케이지의 모든 활동 로그를 함께 삭제합니다.</span>
+<span class="sd">    parameters:</span>
+<span class="sd">      - in: path</span>
+<span class="sd">        name: cage_id</span>
+<span class="sd">        required: true</span>
+<span class="sd">        type: string</span>
+<span class="sd">        example: &quot;B1&quot;</span>
+<span class="sd">    responses:</span>
+<span class="sd">      200:</span>
+<span class="sd">        description: 삭제 성공</span>
+<span class="sd">        schema:</span>
+<span class="sd">          type: object</span>
+<span class="sd">          properties:</span>
+<span class="sd">            ok:</span>
+<span class="sd">              type: boolean</span>
+<span class="sd">              example: true</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">get_db</span><span class="p">()</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;DELETE FROM logs WHERE cage_id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">cage_id</span><span class="p">,))</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;DELETE FROM cages WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">cage_id</span><span class="p">,))</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s1">&#39;ok&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+
+
+<span class="c1"># ========== REST API — 로그 ==========</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/cages/&lt;cage_id&gt;/logs&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">add_log</span><span class="p">(</span><span class="n">cage_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;케이지에 활동 로그를 추가합니다.</span>
+<span class="sd">    ---</span>
+<span class="sd">    tags:</span>
+<span class="sd">      - Logs</span>
+<span class="sd">    summary: 로그 추가</span>
+<span class="sd">    description: |</span>
+<span class="sd">      케이지에 활동 기록(투입/방사/밀도/메모)을 추가합니다.</span>
+
+<span class="sd">      **kind 값에 따른 추가 필드:**</span>
+<span class="sd">      - `input`: species, count, fromId(선택), memo(선택)</span>
+<span class="sd">      - `release`: species, count, memo(선택)</span>
+<span class="sd">      - `density`: density(많음/보통/적음), memo(선택)</span>
+<span class="sd">      - `note`: content</span>
+<span class="sd">    parameters:</span>
+<span class="sd">      - in: path</span>
+<span class="sd">        name: cage_id</span>
+<span class="sd">        required: true</span>
+<span class="sd">        type: string</span>
+<span class="sd">        example: &quot;B1&quot;</span>
+<span class="sd">      - in: body</span>
+<span class="sd">        name: body</span>
+<span class="sd">        required: true</span>
+<span class="sd">        schema:</span>
+<span class="sd">          type: object</span>
+<span class="sd">          required: [kind, date]</span>
+<span class="sd">          properties:</span>
+<span class="sd">            kind:</span>
+<span class="sd">              type: string</span>
+<span class="sd">              enum: [input, release, density, note]</span>
+<span class="sd">              example: &quot;input&quot;</span>
+<span class="sd">            date:</span>
+<span class="sd">              type: string</span>
+<span class="sd">              example: &quot;2026-04-10T09:00&quot;</span>
+<span class="sd">            species:</span>
+<span class="sd">              type: string</span>
+<span class="sd">              example: &quot;담장&quot;</span>
+<span class="sd">            count:</span>
+<span class="sd">              type: integer</span>
+<span class="sd">              example: 100</span>
+<span class="sd">            memo:</span>
+<span class="sd">              type: string</span>
+<span class="sd">              example: &quot;S3에서 이식&quot;</span>
+<span class="sd">    responses:</span>
+<span class="sd">      201:</span>
+<span class="sd">        description: 추가된 로그</span>
+<span class="sd">      400:</span>
+<span class="sd">        description: body 누락</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;body required&#39;</span><span class="p">}),</span> <span class="mi">400</span>
+    <span class="n">log_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+    <span class="n">kind</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;kind&#39;</span><span class="p">,</span> <span class="s1">&#39;note&#39;</span><span class="p">)</span>
+    <span class="n">date</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">)</span>
+    <span class="n">extra</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;kind&#39;</span><span class="p">,</span> <span class="s1">&#39;date&#39;</span><span class="p">)}</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">get_db</span><span class="p">()</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+        <span class="s2">&quot;INSERT INTO logs (id, cage_id, kind, date, data, created_at) VALUES (?, ?, ?, ?, ?, ?)&quot;</span><span class="p">,</span>
+        <span class="p">(</span><span class="n">log_id</span><span class="p">,</span> <span class="n">cage_id</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">extra</span><span class="p">),</span> <span class="n">now</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">log</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM logs WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">log_id</span><span class="p">,))</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">log_row_to_dict</span><span class="p">(</span><span class="n">log</span><span class="p">)),</span> <span class="mi">201</span>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/cages/&lt;cage_id&gt;/logs/&lt;log_id&gt;&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;DELETE&#39;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">delete_log</span><span class="p">(</span><span class="n">cage_id</span><span class="p">,</span> <span class="n">log_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;로그 항목을 삭제합니다.</span>
+<span class="sd">    ---</span>
+<span class="sd">    tags:</span>
+<span class="sd">      - Logs</span>
+<span class="sd">    summary: 로그 삭제</span>
+<span class="sd">    description: 특정 케이지의 활동 로그 항목을 삭제합니다.</span>
+<span class="sd">    parameters:</span>
+<span class="sd">      - in: path</span>
+<span class="sd">        name: cage_id</span>
+<span class="sd">        required: true</span>
+<span class="sd">        type: string</span>
+<span class="sd">        example: &quot;B1&quot;</span>
+<span class="sd">      - in: path</span>
+<span class="sd">        name: log_id</span>
+<span class="sd">        required: true</span>
+<span class="sd">        type: string</span>
+<span class="sd">        example: &quot;a1b2c3d4-...&quot;</span>
+<span class="sd">    responses:</span>
+<span class="sd">      200:</span>
+<span class="sd">        description: 삭제 성공</span>
+<span class="sd">        schema:</span>
+<span class="sd">          type: object</span>
+<span class="sd">          properties:</span>
+<span class="sd">            ok:</span>
+<span class="sd">              type: boolean</span>
+<span class="sd">              example: true</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">get_db</span><span class="p">()</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;DELETE FROM logs WHERE id = ? AND cage_id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">log_id</span><span class="p">,</span> <span class="n">cage_id</span><span class="p">))</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s1">&#39;ok&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+
+
+<span class="c1"># ========== 앱 시작 ==========</span>
+
+<span class="c1"># SPHINX_BUILD 환경변수가 설정된 경우(autodoc import 시)에는</span>
+<span class="c1"># DB 초기화를 건너뜁니다.</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_os</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">_os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SPHINX_BUILD&#39;</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">app</span><span class="o">.</span><span class="n">app_context</span><span class="p">():</span>
+        <span class="n">init_db</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">debug</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Park Haejin.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

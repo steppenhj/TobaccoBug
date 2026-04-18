@@ -1,0 +1,197 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ko" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flask 애플리케이션 (app.py) &mdash; TobaccoBug 1.0.0 문서</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5a0dd2f0"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="_static/translations.js?v=afa94a99"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="색인" href="genindex.html" />
+    <link rel="search" title="검색" href="search.html" />
+    <link rel="next" title="migrate_from_firebase module" href="migrate_from_firebase.html" />
+    <link rel="prev" title="TobaccoBug — 사육 관리 시스템" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            TobaccoBug
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">코드 문서</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Flask 애플리케이션 (app.py)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-app">모듈 개요</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#tobaccobug-flask-application">TobaccoBug Flask Application</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#db">DB 연결</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#app.get_db"><code class="docutils literal notranslate"><span class="pre">get_db()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#app.close_connection"><code class="docutils literal notranslate"><span class="pre">close_connection()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">초기화</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#app.init_db"><code class="docutils literal notranslate"><span class="pre">init_db()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">변환 헬퍼</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#app.cage_row_to_dict"><code class="docutils literal notranslate"><span class="pre">cage_row_to_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#app.log_row_to_dict"><code class="docutils literal notranslate"><span class="pre">log_row_to_dict()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="migrate_from_firebase.html">migrate_from_firebase module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">TobaccoBug</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Flask 애플리케이션 (app.py)</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/steppenhj/TobaccoBug/blob/main/my-flask-project/docs/source/app.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="flask-app-py">
+<h1>Flask 애플리케이션 (app.py)<a class="headerlink" href="#flask-app-py" title="Link to this heading"></a></h1>
+<p>TobaccoBug의 Flask 백엔드입니다.
+SQLite DB 연결 관리, REST API 엔드포인트 6개, Swagger UI 설정이 한 파일에 정의됩니다.</p>
+<div class="admonition note">
+<p class="admonition-title">참고</p>
+<p>라우트 함수(<code class="docutils literal notranslate"><span class="pre">get_cages</span></code>, <code class="docutils literal notranslate"><span class="pre">create_cage</span></code> 등)는 Swagger UI 전용 YAML 포맷
+docstring을 사용하므로 이 문서에서는 제외합니다.
+API 명세는 <a class="reference internal" href="index.html"><span class="doc">TobaccoBug — 사육 관리 시스템</span></a> 의 엔드포인트 표 또는 <code class="docutils literal notranslate"><span class="pre">/apidocs</span></code> 에서 확인하세요.</p>
+</div>
+<hr class="docutils" />
+<section id="module-app">
+<span id="id1"></span><h2>모듈 개요<a class="headerlink" href="#module-app" title="Link to this heading"></a></h2>
+<section id="tobaccobug-flask-application">
+<h3>TobaccoBug Flask Application<a class="headerlink" href="#tobaccobug-flask-application" title="Link to this heading"></a></h3>
+<p>담배장님노린재(<em>Nesidiocoris tenuis</em>) 사육 관리 시스템의 Flask 백엔드.
+SQLite 데이터베이스를 사용하며 케이지 및 활동 로그에 대한 REST API를 제공합니다.</p>
+<p>Swagger UI:  <a class="reference external" href="http://localhost:5000/apidocs">http://localhost:5000/apidocs</a>
+GitHub Pages: <a class="reference external" href="https://steppenhj.github.io/TobaccoBug/">https://steppenhj.github.io/TobaccoBug/</a></p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="db">
+<h2>DB 연결<a class="headerlink" href="#db" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="app.get_db">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">get_db</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#get_db"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#app.get_db" title="Link to this definition"></a></dt>
+<dd><p>현재 요청 컨텍스트에서 SQLite 연결을 반환합니다.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.close_connection">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">close_connection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_exception</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#app.close_connection" title="Link to this definition"></a></dt>
+<dd><p>요청 종료 시 DB 연결을 닫습니다.</p>
+</dd></dl>
+
+</section>
+<hr class="docutils" />
+<section id="id2">
+<h2>초기화<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="app.init_db">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">init_db</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#init_db"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#app.init_db" title="Link to this definition"></a></dt>
+<dd><p>DB를 초기화하고, 케이지가 없으면 기본값(B1~B10, S1~S5)을 생성합니다.</p>
+<p>테이블 구조:</p>
+<ul class="simple">
+<li><p><strong>cages</strong>: id, type, label, current_status(JSON), updated_at</p></li>
+<li><p><strong>logs</strong>: id, cage_id, kind, date, data(JSON), created_at</p></li>
+</ul>
+</dd></dl>
+
+</section>
+<hr class="docutils" />
+<section id="id3">
+<h2>변환 헬퍼<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="app.cage_row_to_dict">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">cage_row_to_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#cage_row_to_dict"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#app.cage_row_to_dict" title="Link to this definition"></a></dt>
+<dd><p>SQLite Row를 케이지 딕셔너리로 변환합니다.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.log_row_to_dict">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">log_row_to_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#log_row_to_dict"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#app.log_row_to_dict" title="Link to this definition"></a></dt>
+<dd><p>SQLite Row를 로그 딕셔너리로 변환합니다.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="TobaccoBug — 사육 관리 시스템" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="migrate_from_firebase.html" class="btn btn-neutral float-right" title="migrate_from_firebase module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Park Haejin.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

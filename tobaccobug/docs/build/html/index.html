@@ -1,0 +1,220 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ko" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TobaccoBug — 사육 관리 시스템 &mdash; TobaccoBug 1.0.0 문서</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5a0dd2f0"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="_static/translations.js?v=afa94a99"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="색인" href="genindex.html" />
+    <link rel="search" title="검색" href="search.html" />
+    <link rel="next" title="Flask 애플리케이션 (app.py)" href="app.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            TobaccoBug
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">코드 문서</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="app.html">Flask 애플리케이션 (app.py)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migrate_from_firebase.html">migrate_from_firebase module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">TobaccoBug</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">TobaccoBug — 사육 관리 시스템</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/steppenhj/TobaccoBug/blob/main/my-flask-project/docs/source/index.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="tobaccobug">
+<h1>TobaccoBug — 사육 관리 시스템<a class="headerlink" href="#tobaccobug" title="Link to this heading"></a></h1>
+<p>담배장님노린재(<em>Nesidiocoris tenuis</em>) 포식자-먹이 사육을 관리하는 Flask 기반 웹 애플리케이션입니다.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>GitHub</strong></p></td>
+<td><p><a class="reference external" href="https://github.com/steppenhj/TobaccoBug">https://github.com/steppenhj/TobaccoBug</a></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>기술 문서 (이 페이지)</strong></p></td>
+<td><p><a class="reference external" href="https://steppenhj.github.io/TobaccoBug/">https://steppenhj.github.io/TobaccoBug/</a></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Swagger UI (로컬)</strong></p></td>
+<td><p><a class="reference external" href="http://localhost:5000/apidocs">http://localhost:5000/apidocs</a></p></td>
+</tr>
+</tbody>
+</table>
+<hr class="docutils" />
+<section id="id1">
+<h2>시스템 구조<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>┌─────────────────────────────────────────────────────┐
+│  Browser                                            │
+│  ┌─────────────┐    ES Modules                      │
+│  │  index.html │ ──► main.js                        │
+│  │             │     ├── js/state.js    (전역 상태)  │
+│  │             │     ├── js/db.js       (API 통신)  │
+│  │             │     ├── js/render.js   (DOM 렌더)  │
+│  │             │     ├── js/alerts.js   (경고 로직) │
+│  │             │     ├── js/modals.js   (모달 UI)   │
+│  │             │     └── js/helpers.js  (유틸)      │
+└──┴──────┬──────┴────────────────────────────────────┘
+          │ HTTP / REST API
+┌──────────▼──────────┐
+│  Flask (app.py)     │   Python 백엔드
+│  ├── /              │   메인 대시보드
+│  ├── /measure       │   잎 크기 측정 도구
+│  ├── /api/cages     │   케이지 CRUD
+│  └── /api/.../logs  │   로그 CRUD
+└──────────┬──────────┘
+           │ sqlite3
+┌───────────▼──────────┐
+│  tobaccobug.db       │   SQLite 로컬 파일
+│  ├── cages           │   케이지 정보 + 현재 상태(JSON)
+│  └── logs            │   케이지별 활동 기록
+└──────────────────────┘
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="rest-api">
+<h2>REST API 엔드포인트<a class="headerlink" href="#rest-api" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 8.0%" />
+<col style="width: 35.0%" />
+<col style="width: 57.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>#</p></th>
+<th class="head"><p>메서드 + 경로</p></th>
+<th class="head"><p>설명</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span>&#160; <span class="pre">/api/cages</span></code></p></td>
+<td><p>모든 케이지와 로그 조회</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/api/cages</span></code></p></td>
+<td><p>새 케이지 생성</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PUT</span>&#160; <span class="pre">/api/cages/&lt;id&gt;</span></code></p></td>
+<td><p>케이지 상태·이름 수정</p></td>
+</tr>
+<tr class="row-odd"><td><p>4</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">/api/cages/&lt;id&gt;</span></code></p></td>
+<td><p>케이지 삭제 (하위 로그 포함)</p></td>
+</tr>
+<tr class="row-even"><td><p>5</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/api/cages/&lt;id&gt;/logs</span></code></p></td>
+<td><p>활동 로그 추가</p></td>
+</tr>
+<tr class="row-odd"><td><p>6</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">/api/cages/&lt;id&gt;/logs/&lt;log_id&gt;</span></code></p></td>
+<td><p>로그 항목 삭제</p></td>
+</tr>
+</tbody>
+</table>
+<p>인터랙티브 테스트: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">app.py</span></code> 실행 후 <a class="reference external" href="http://localhost:5000/apidocs">http://localhost:5000/apidocs</a></p>
+<hr class="docutils" />
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">코드 문서</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="app.html">Flask 애플리케이션 (app.py)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="app.html#module-app">모듈 개요</a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#db">DB 연결</a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#id2">초기화</a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#id3">변환 헬퍼</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="migrate_from_firebase.html">migrate_from_firebase module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="migrate_from_firebase.html#migrate_from_firebase.init_db"><code class="docutils literal notranslate"><span class="pre">init_db()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="migrate_from_firebase.html#migrate_from_firebase.migrate"><code class="docutils literal notranslate"><span class="pre">migrate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="app.html" class="btn btn-neutral float-right" title="Flask 애플리케이션 (app.py)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Park Haejin.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

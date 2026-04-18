@@ -1,0 +1,11 @@
+# ── 앱 실행 (Runtime) ─────────────────────────────────────────────
+flask
+flasgger
+
+# ── 문서 빌드 (Sphinx / GitHub Actions CI) ────────────────────────
+sphinx
+sphinx-rtd-theme
+
+# ── Firebase → SQLite 마이그레이션 전용 (이미 완료, 재실행 불필요) ──
+# migrate_from_firebase.py 를 다시 실행할 경우에만 아래 주석 해제
+# firebase-admin
